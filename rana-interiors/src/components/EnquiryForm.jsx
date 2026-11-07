@@ -51,27 +51,41 @@ export default function EnquiryForm({ initialCategory = '', initialMessage = '',
     return Boolean(link);
   };
 
-  const onSubmit = async (e) => {
-    e.preventDefault();
-    if (!validate()) return;
+  
+const onSubmit = async (e) => {
+  e.preventDefault();
+  if (!validate()) return;
 
-    setStatus({ type: 'loading', text: 'Sending…' });
-    try {
-      await api('/api/enquiries', { method: 'POST', body: { ...form, categoryName: categoryName() } });
-      setStatus({ type: 'success', text: 'Thank you! We have received your enquiry and will contact you soon.' });
-      setForm({ name: '', phone: '', city: '', category: initialCategory, property: '', budget: '', message: '' });
-    } catch (err) {
-      // Validation / rate-limit messages come from the server and are safe to show.
-      if (err.status === 400 || err.status === 429) {
-        setStatus({ type: 'error', text: err.message });
-      } else if (sendWhatsApp()) {
-        // Server unreachable: fall back to WhatsApp so the lead is not lost.
-        setStatus({ type: 'success', text: 'Opening WhatsApp with your enquiry. Press send there to reach us.' });
-      } else {
-        setStatus({ type: 'error', text: 'We could not send your enquiry right now. Please try again shortly.' });
-      }
-    }
-  };
+  setStatus({ type: 'loading', text: 'Sending…' });
+
+  try {
+    await api('/api/enquiries', {
+      method: 'POST',
+      body: { ...form, categoryName: categoryName() },
+    });
+
+    setStatus({
+      type: 'success',
+      text: 'Thank you! Your enquiry has been received. We will contact you soon.',
+    });
+
+    setForm({
+      name: '',
+      phone: '',
+      city: '',
+      category: initialCategory,
+      property: '',
+      budget: '',
+      message: '',
+    });
+  } catch (err) {
+    setStatus({
+      type: 'error',
+      text: err.message || 'Unable to submit your enquiry. Please try again.',
+    });
+  }
+};
+
 
   const waDisabled = !siteConfig.whatsappNumber;
 

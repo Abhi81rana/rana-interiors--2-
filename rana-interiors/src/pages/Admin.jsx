@@ -56,11 +56,36 @@ function Enquiries({ token, onAuthError }) {
   useEffect(load, [load]);
 
   const setStatus = async (id, status) => {
-    try {
-      const updated = await api(`/api/admin/enquiries/${id}`, { method: 'PATCH', token, body: { status } });
-      setItems((list) => list.map((e) => (e.id === id ? updated : e)));
-    } catch (err) { setError(err.message); }
-  };
+  const previousItems = items;
+
+  // Immediately update the UI
+  setItems((list) =>
+    list.map((e) =>
+      String(e.id) === String(id) ? { ...e, status } : e
+    )
+  );
+
+  setError('');
+
+  try {
+    const updated = await api(`/api/admin/enquiries/${id}`, {
+      method: 'PATCH',
+      token,
+      body: { status }
+    });
+
+    // Keep existing enquiry details and update returned fields
+    setItems((list) =>
+      list.map((e) =>
+        String(e.id) === String(id) ? { ...e, ...updated } : e
+      )
+    );
+  } catch (err) {
+    // Restore previous data if server update fails
+    setItems(previousItems);
+    setError(err.message || 'Unable to update status.');
+  }
+};
   const remove = async (id) => {
     if (!window.confirm('Delete this enquiry permanently?')) return;
     try {

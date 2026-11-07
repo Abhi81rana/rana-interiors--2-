@@ -1,3 +1,4 @@
+import { supabase } from './supabase.js';
 import cron from 'node-cron';
 import { getDb, save, DATA_DIR, UPLOADS_DIR } from './db.js';
 import 'dotenv/config';
@@ -53,33 +54,71 @@ const enquiryLimiter = rateLimit({
 });
 
 app.post('/api/enquiries', enquiryLimiter, async (req, res) => {
-  const b = req.body || {};
-  // Honeypot: real visitors never fill this hidden field.
-  if (b.website) return res.status(201).json({ ok: true });
+  try {
+    const b = req.body || {};
 
-  const enquiry = {
-    id: id(),
-    name: clean(b.name, 100),
-    phone: clean(b.phone, 20),
-    city: clean(b.city, 80),
-    category: clean(b.category, 40),
-    property: clean(b.property, 60),
-    budget: clean(b.budget, 40),
-    message: clean(b.message, 2000),
-    status: 'new',
-    createdAt: new Date().toISOString(),
-  };
+    // Honeypot protection
+    if (b.website) {
+      return res.status(201).json({ ok: true });
+    }
 
-  if (enquiry.name.length < 2) return res.status(400).json({ error: 'Please enter your name.' });
-  if (!/^\+?[\d\s-]{10,15}$/.test(enquiry.phone)) return res.status(400).json({ error: 'Please enter a valid phone number.' });
-  if (!enquiry.city) return res.status(400).json({ error: 'Please enter your city.' });
-  if (!CATEGORY_SLUGS.includes(enquiry.category)) return res.status(400).json({ error: 'Please choose a valid category.' });
-  enquiry.categoryName = CATEGORY_NAMES[enquiry.category];
+    const enquiry = {
+      name: clean(b.name, 100),
+      phone: clean(b.phone, 20),
+      city: clean(b.city, 80),
+      category: clean(b.category, 40),
+      property: clean(b.property, 60),
+      budget: clean(b.budget, 40),
+      message: clean(b.message, 2000),
+    };
 
-  getDb().enquiries.unshift(enquiry);
-  await save();
-  console.log(`New enquiry from ${enquiry.name} (${enquiry.categoryName})`);
-  res.status(201).json({ ok: true });
+    if (enquiry.name.length < 2) {
+      return res.status(400).json({ error: 'Please enter your name.' });
+    }
+
+    if (!/^\+?[\d\s-]{10,15}$/.test(enquiry.phone)) {
+      return res.status(400).json({ error: 'Please enter a valid phone number.' });
+    }
+
+    if (!enquiry.city) {
+      return res.status(400).json({ error: 'Please enter your city.' });
+    }
+
+    if (!CATEGORY_SLUGS.includes(enquiry.category)) {
+      return res.status(400).json({ error: 'Please choose a valid category.' });
+    }
+
+    const categoryName = CATEGORY_NAMES[enquiry.category];
+
+    const { error } = await supabase
+      .from('enquiries')
+      .insert({
+        name: enquiry.name,
+        phone: enquiry.phone,
+        city: enquiry.city,
+        category: enquiry.category,
+        category_name: categoryName,
+        property: enquiry.property,
+        budget: enquiry.budget,
+        message: enquiry.message,
+        status: 'New',
+      });
+
+    if (error) {
+      console.error('Supabase enquiry error:', error);
+      return res.status(500).json({
+        error: 'Unable to save enquiry. Please try again.',
+      });
+    }
+
+    console.log(`New enquiry from ${enquiry.name} (${categoryName})`);
+
+    return res.status(201).json({ ok: true });
+
+  } catch (error) {
+    console.error('Enquiry error:', error);
+    return res.status(500).json({ error: 'Something went wrong.' });
+  }
 });
 
 /* ---------- Admin auth ---------- */
@@ -118,26 +157,77 @@ function requireAdmin(req, res, next) {
 }
 
 /* ---------- Admin: enquiries ---------- */
-app.get('/api/admin/enquiries', requireAdmin, (_req, res) => res.json(getDb().enquiries));
+app.get('/api/admin/enquiries', requireAdmin, async (req, res) => {
+  const { data, error } = await supabase
+    .from('enquiries')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Fetch enquiries error:', error);
+    return res.status(500).json({ error: 'Unable to fetch enquiries.' });
+  }
+
+  const enquiries = data.map((item) => ({
+    id: String(item.id),
+    name: item.name,
+    phone: item.phone,
+    city: item.city,
+    category: item.category,
+    categoryName: item.category_name,
+    property: item.property,
+    budget: item.budget,
+    message: item.message,
+    status: item.status?.toLowerCase() || 'new',
+    createdAt: item.created_at,
+  }));
+
+  res.json(enquiries);
+});
 
 app.patch('/api/admin/enquiries/:id', requireAdmin, async (req, res) => {
-  const item = getDb().enquiries.find((e) => e.id === req.params.id);
-  if (!item) return res.status(404).json({ error: 'Enquiry not found.' });
-  if (!['new', 'contacted', 'closed'].includes(req.body?.status)) return res.status(400).json({ error: 'Invalid status.' });
-  item.status = req.body.status;
-  await save();
-  res.json(item);
+  const status = req.body?.status;
+
+  if (!['new', 'contacted', 'closed'].includes(status)) {
+    return res.status(400).json({ error: 'Invalid status.' });
+  }
+
+  const { data, error } = await supabase
+    .from('enquiries')
+    .update({ status })
+    .eq('id', req.params.id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Update enquiry error:', error);
+    return res.status(500).json({ error: 'Unable to update enquiry.' });
+  }
+
+  res.json({
+    id: String(data.id),
+    status: data.status.toLowerCase(),
+  });
 });
 
 app.delete('/api/admin/enquiries/:id', requireAdmin, async (req, res) => {
-  const db = getDb();
-  const before = db.enquiries.length;
-  db.enquiries = db.enquiries.filter((e) => e.id !== req.params.id);
-  if (db.enquiries.length === before) return res.status(404).json({ error: 'Enquiry not found.' });
-  await save();
+  const { data, error } = await supabase
+    .from('enquiries')
+    .delete()
+    .eq('id', req.params.id)
+    .select('id');
+
+  if (error) {
+    console.error('Delete enquiry error:', error);
+    return res.status(500).json({ error: 'Unable to delete enquiry.' });
+  }
+
+  if (!data || data.length === 0) {
+    return res.status(404).json({ error: 'Enquiry not found.' });
+  }
+
   res.json({ ok: true });
 });
-
 /* ---------- Admin: projects (with photo upload) ---------- */
 const EXT = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp' };
 const upload = multer({

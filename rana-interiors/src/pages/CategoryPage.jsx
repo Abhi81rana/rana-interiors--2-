@@ -8,6 +8,7 @@ import SmartImage from '../components/SmartImage.jsx';
 import EnquiryForm from '../components/EnquiryForm.jsx';
 import Reveal from '../components/Reveal.jsx';
 import NotFound from './NotFound.jsx';
+import { createPortal } from 'react-dom';
 
 export default function CategoryPage() {
   const { slug } = useParams();
@@ -160,50 +161,52 @@ export default function CategoryPage() {
         </div>
       </section>
 
-      {preview && (
-        <div
-          className="design-modal"
+      {preview &&
+  createPortal(
+    <div
+      className="design-modal"
+      onClick={() => setPreview(null)}
+    >
+      <div
+        className="design-modal__content"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          className="design-modal__close"
           onClick={() => setPreview(null)}
+          aria-label="Close preview"
         >
-          <div
-            className="design-modal__content"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              className="design-modal__close"
-              onClick={() => setPreview(null)}
-              aria-label="Close preview"
-            >
-              <X size={24} />
-            </button>
+          <X size={24} />
+        </button>
 
-            <div className="design-modal__image">
-              <SmartImage
-                src={preview.image}
-                alt={preview.title}
-              />
-            </div>
-
-            <div className="design-modal__info">
-              <span>{category.name}</span>
-              <h2>{preview.title}</h2>
-              <p>{preview.description}</p>
-
-              <button
-                className="btn btn--dark"
-                onClick={() => {
-                  const selectedDesign = preview;
-                  setPreview(null);
-                  enquire(selectedDesign);
-                }}
-              >
-                Enquire About This Design
-                <ArrowRight size={16} />
-              </button>
-            </div>
-          </div>
+        <div className="design-modal__image">
+          <SmartImage
+            src={preview.image}
+            alt={preview.title}
+          />
         </div>
-      )}
+
+        <div className="design-modal__info">
+          <span>{category.name}</span>
+          <h2>{preview.title}</h2>
+          <p>{preview.description}</p>
+
+          <button
+            className="btn btn--dark"
+            onClick={() => {
+              const selectedDesign = preview;
+              setPreview(null);
+              enquire(selectedDesign);
+            }}
+          >
+            Enquire About This Design
+            <ArrowRight size={16} />
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  )}
     </>
   );
 }
