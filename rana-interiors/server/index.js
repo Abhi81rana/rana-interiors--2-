@@ -1,3 +1,5 @@
+import cron from 'node-cron';
+import { getDb, save, DATA_DIR, UPLOADS_DIR } from './db.js';
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
@@ -9,7 +11,6 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { getDb, save, UPLOADS_DIR } from './db.js';
 import { CATEGORY_SLUGS, CATEGORY_NAMES } from './categories.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -102,7 +103,14 @@ function requireAdmin(req, res, next) {
   if (!adminEnabled) return res.status(503).json({ error: 'Admin is not configured on the server.' });
   const token = (req.headers.authorization || '').replace(/^Bearer /, '');
   try {
-    jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({
+        error: 'Admin access required.'
+      });
+    }
+
     next();
   } catch {
     res.status(401).json({ error: 'Session expired. Please log in again.' });
@@ -202,5 +210,43 @@ app.use((err, _req, res, _next) => {
   console.error(err);
   res.status(500).json({ error: 'Something went wrong on the server.' });
 });
+
+// Automatic daily backup
+const BACKUP_DIR = path.join(__dirname, 'backups');
+
+async function createBackup() {
+  try {
+    // Save latest database changes first
+    await save();
+
+    const date = new Date().toISOString().replace(/[:.]/g, '-');
+    const backupPath = path.join(BACKUP_DIR, date);
+
+    await fs.promises.mkdir(backupPath, { recursive: true });
+
+    // Database backup
+    await fs.promises.copyFile(
+      path.join(DATA_DIR, 'db.json'),
+      path.join(backupPath, 'db.json')
+    );
+
+    // Uploaded images backup
+    await fs.promises.cp(
+      UPLOADS_DIR,
+      path.join(backupPath, 'uploads'),
+      { recursive: true }
+    );
+
+    console.log('Daily backup created:', backupPath);
+  } catch (error) {
+    console.error('Backup failed:', error);
+  }
+}
+
+// Run every day at 2:00 AM
+cron.schedule('0 2 * * *', createBackup);
+
+
+console.log('Automatic daily backup scheduled for 2:00 AM');
 
 app.listen(PORT, () => console.log(`RANA INTERIORS server running on http://localhost:${PORT}`));

@@ -1,7 +1,7 @@
 
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowRight, ArrowUpRight } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, X } from 'lucide-react';
 import { categories, getCategory } from '../data/categories.js';
 import { designs } from '../data/designs.js';
 import SmartImage from '../components/SmartImage.jsx';
@@ -14,6 +14,23 @@ export default function CategoryPage() {
   const category = getCategory(slug);
   const [selected, setSelected] = useState('');
   const formRef = useRef(null);
+  const [preview, setPreview] = useState(null);
+
+    useEffect(() => {
+      if (!preview) return;
+
+      const handleEscape = (e) => {
+        if (e.key === 'Escape') setPreview(null);
+      };
+
+      document.addEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'hidden';
+
+      return () => {
+        document.removeEventListener('keydown', handleEscape);
+        document.body.style.overflow = '';
+      };
+    }, [preview]);
 
   if (!category) return <NotFound />;
 
@@ -77,8 +94,8 @@ export default function CategoryPage() {
 
                     <button
                       className="design-card__view"
-                      onClick={() => enquire(d)}
-                      aria-label={`Enquire about ${d.title}`}
+                      onClick={() => setPreview(d)}
+                      aria-label={`View ${d.title}`}
                     >
                       <ArrowUpRight size={20} />
                     </button>
@@ -94,9 +111,9 @@ export default function CategoryPage() {
 
                     <button
                       className="design-card__link"
-                      onClick={() => enquire(d)}
+                      onClick={() => setPreview(d)}
                     >
-                      Enquire About This Design
+                      View Design
                       <ArrowRight size={16} />
                     </button>
                   </div>
@@ -142,6 +159,51 @@ export default function CategoryPage() {
           </div>
         </div>
       </section>
+
+      {preview && (
+        <div
+          className="design-modal"
+          onClick={() => setPreview(null)}
+        >
+          <div
+            className="design-modal__content"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="design-modal__close"
+              onClick={() => setPreview(null)}
+              aria-label="Close preview"
+            >
+              <X size={24} />
+            </button>
+
+            <div className="design-modal__image">
+              <SmartImage
+                src={preview.image}
+                alt={preview.title}
+              />
+            </div>
+
+            <div className="design-modal__info">
+              <span>{category.name}</span>
+              <h2>{preview.title}</h2>
+              <p>{preview.description}</p>
+
+              <button
+                className="btn btn--dark"
+                onClick={() => {
+                  const selectedDesign = preview;
+                  setPreview(null);
+                  enquire(selectedDesign);
+                }}
+              >
+                Enquire About This Design
+                <ArrowRight size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
