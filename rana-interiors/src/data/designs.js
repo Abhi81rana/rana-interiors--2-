@@ -1,78 +1,77 @@
-import { categories } from './categories.js';
 
-// Sample design ideas per category. Edit titles/descriptions or swap `image`
-// for your own photos. Images default to the category's placeholder photos.
 const ideas = {
   'living-room': [
-    ['Warm Minimal Lounge', 'Low-profile seating, a wooden accent wall and soft indirect lighting.'],
-    ['Open Plan Living & Dining', 'One flowing space with zoned lighting and a shared storage wall.'],
-    ['Textured Feature Wall', 'Fluted panels and a warm neutral palette behind the main sofa.'],
-    ['Compact Family Living', 'Smart seating and concealed storage for smaller homes.'],
+    ['Warm Minimal Lounge', 'Low-profile seating, wooden accents and soft lighting.', 'living room minimalist interior'],
+    ['Open Plan Living & Dining', 'An open layout with coordinated furniture.', 'open plan living dining interior'],
+    ['Textured Feature Wall', 'Fluted panels and a warm neutral palette.', 'living room fluted feature wall'],
+    ['Compact Family Living', 'Smart seating and concealed storage.', 'small modern living room interior'],
   ],
   bedroom: [
-    ['Master Suite Retreat', 'Upholstered headboard, bedside lighting and a full wardrobe wall.'],
-    ['Kids Bedroom', 'Safe, playful layout with a study corner and built-in storage.'],
-    ['Guest Bedroom', 'Simple, comfortable and easy to maintain.'],
-    ['Wooden Panel Bedroom', 'Warm wood panelling with a calm neutral palette.'],
+    ['Master Suite Retreat', 'Upholstered headboard and elegant bedside lighting.', 'luxury master bedroom interior'],
+    ['Kids Bedroom', 'A playful layout with a study corner.', 'modern kids bedroom interior'],
+    ['Guest Bedroom', 'A simple, comfortable bedroom design.', 'minimal guest bedroom interior'],
+    ['Wooden Panel Bedroom', 'Warm wood panelling with a calm palette.', 'wooden panel bedroom interior'],
   ],
   'modular-kitchen': [
-    ['L-Shaped Modular Kitchen', 'Efficient work triangle with tall units and a breakfast counter.'],
-    ['Parallel Kitchen', 'Two clean runs of cabinetry with generous drawer storage.'],
-    ['Island Kitchen', 'A central island for prep, seating and casual meals.'],
-    ['Compact Kitchen', 'Every inch planned for storage in smaller apartments.'],
+    ['L-Shaped Modular Kitchen', 'Efficient layout with generous storage.', 'L shaped modular kitchen'],
+    ['Parallel Kitchen', 'Two clean runs of cabinetry.', 'parallel modular kitchen interior'],
+    ['Island Kitchen', 'A central island for preparation and seating.', 'modern kitchen island interior'],
+    ['Compact Kitchen', 'Smart storage for smaller homes.', 'small modular kitchen interior'],
   ],
   'tv-unit': [
-    ['Floating TV Unit', 'Wall-hung unit with hidden cable routing and open display shelves.'],
-    ['Panelled Media Wall', 'Wood and fluted panels with warm LED backlighting.'],
-    ['Storage-Led TV Wall', 'Closed cabinets and display niches in one composition.'],
-    ['Stone Finish Feature Wall', 'A textured backdrop that frames the screen.'],
+    ['Floating TV Unit', 'Wall-mounted unit with hidden cable routing.', 'floating tv unit interior'],
+    ['Panelled Media Wall', 'Wood and fluted panels with warm lighting.', 'fluted tv panel wall design'],
+    ['Storage-Led TV Wall', 'Closed cabinets and display niches.', 'tv wall storage cabinet interior'],
+    ['Stone Finish Feature Wall', 'A textured backdrop for the television.', 'marble stone tv feature wall'],
   ],
   wardrobe: [
-    ['Sliding Door Wardrobe', 'Space-saving doors with internal drawers and shelves.'],
-    ['Hinged Wardrobe', 'Classic layout with full-height hanging and loft storage.'],
-    ['Walk-in Wardrobe', 'Open shelving, lighting and a dedicated dressing zone.'],
-    ['Kids Wardrobe', 'Lower hanging height and easy-reach storage.'],
+    ['Sliding Door Wardrobe', 'Space-saving doors with internal storage.', 'sliding door wardrobe interior'],
+    ['Hinged Wardrobe', 'Full-height hanging and loft storage.', 'hinged wardrobe design interior'],
+    ['Walk-in Wardrobe', 'Open shelving and a dedicated dressing zone.', 'walk in wardrobe interior'],
+    ['Kids Wardrobe', 'Easy-reach storage for a children’s room.', 'kids wardrobe interior design'],
   ],
   'custom-furniture': [
-    ['Made-to-Measure Bed', 'A bed with storage, sized to your room and mattress.'],
-    ['Dining Table & Seating', 'A table designed around your family size and room.'],
-    ['Study Table & Bookshelf', 'Compact work-from-home setup with display shelving.'],
-    ['Console & Entryway Unit', 'Shoe storage and a statement console at the door.'],
+    ['Made-to-Measure Bed', 'A custom bed with practical storage.', 'modern wooden bed furniture'],
+    ['Dining Table & Seating', 'A dining setup designed around your space.', 'modern wooden dining table interior'],
+    ['Study Table & Bookshelf', 'A compact workspace with display shelving.', 'study table bookshelf furniture'],
+    ['Console & Entryway Unit', 'A useful and stylish entrance unit.', 'modern entryway console furniture'],
   ],
   'dressing-unit': [
-    ['Wall-Mounted Dresser', 'Mirror, lighting and drawers in a slim footprint.'],
-    ['Wardrobe-Integrated Dressing Corner', 'A dressing area built into your wardrobe wall.'],
-    ['Vanity with LED Mirror', 'Even lighting and organised storage for daily use.'],
-    ['Walk-in Dressing Room', 'A full room for clothes, accessories and getting ready.'],
+    ['Wall-Mounted Dresser', 'Mirror and drawers in a slim footprint.', 'wall mounted dressing table interior'],
+    ['Wardrobe-Integrated Dressing Corner', 'A dressing area built into your wardrobe.', 'wardrobe dressing unit interior'],
+    ['Vanity with LED Mirror', 'A vanity with organised storage.', 'modern vanity led mirror interior'],
+    ['Walk-in Dressing Room', 'A dedicated dressing space with storage.', 'walk in dressing room interior'],
   ],
   'false-ceiling': [
-    ['Peripheral Cove Ceiling', 'Soft edge lighting that gives the room depth.'],
-    ['Layered Ceiling Design', 'Multiple levels with recessed spotlights.'],
-    ['Wooden Accent Ceiling', 'Wood detailing over the living or dining area.'],
-    ['Minimal Flat Ceiling', 'A clean finish with discreet lighting.'],
+    ['Peripheral Cove Ceiling', 'Soft edge lighting for room depth.', 'peripheral cove false ceiling design'],
+    ['Layered Ceiling Design', 'Multiple levels with recessed lighting.', 'layered false ceiling interior'],
+    ['Wooden Accent Ceiling', 'Wood detailing for a warm finish.', 'wooden false ceiling living room'],
+    ['Minimal Flat Ceiling', 'A clean ceiling with discreet lighting.', 'minimal false ceiling interior'],
   ],
   'pooja-room': [
-    ['Wall-Mounted Pooja Unit', 'Compact unit with shelf, drawer and warm lighting.'],
-    ['Carved Panel Pooja Room', 'Detailed panels with a dedicated lamp niche.'],
-    ['Corner Pooja Unit', 'Makes the most of an unused corner.'],
-    ['Pooja Room with Storage', 'Closed storage for puja items and books.'],
+    ['Wall-Mounted Pooja Unit', 'A compact unit with shelves and lighting.', 'wall mounted pooja mandir design'],
+    ['Carved Panel Pooja Room', 'Decorative panels and a dedicated lamp niche.', 'carved wooden pooja room interior'],
+    ['Corner Pooja Unit', 'A functional design for an unused corner.', 'corner pooja mandir interior'],
+    ['Pooja Room with Storage', 'Closed storage for puja essentials.', 'pooja room cabinet storage design'],
   ],
   office: [
-    ['Open Workstation Layout', 'Efficient desk arrangement with cable management.'],
-    ['Reception & Waiting Area', 'A clear first impression for your visitors.'],
-    ['Cabin & Meeting Room', 'Quiet, well-lit spaces for focused work.'],
-    ['Small Office Fit-Out', 'Practical planning for compact commercial spaces.'],
+    ['Open Workstation Layout', 'Efficient desks with cable management.', 'modern open office workstation interior'],
+    ['Reception & Waiting Area', 'A welcoming reception space.', 'modern office reception interior'],
+    ['Cabin & Meeting Room', 'A quiet and well-lit workspace.', 'modern office cabin meeting room'],
+    ['Small Office Fit-Out', 'Practical planning for compact offices.', 'small modern office interior'],
   ],
 };
 
+// Generate category-wise design data.
 export const designs = Object.fromEntries(
-  categories.map((cat) => [
-    cat.slug,
-    (ideas[cat.slug] || []).map(([title, description], i) => ({
-      id: `${cat.slug}-${i + 1}`,
+  Object.entries(ideas).map(([slug, items]) => [
+    slug,
+    items.map(([title, description, searchTerm], index) => ({
+      id: `${slug}-${index + 1}`,
       title,
       description,
-      image: cat.images[i % cat.images.length],
+      image: `https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=900&q=80`,
+      imageSearch: searchTerm,
     })),
   ])
 );

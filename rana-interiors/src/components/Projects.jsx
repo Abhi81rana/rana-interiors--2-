@@ -87,21 +87,60 @@ export default function Projects() {
         </div>
       </div>
 
-      {active && (
-        <div className="modal" role="dialog" aria-modal="true" aria-label={active.title} onClick={() => setActive(null)}>
-          <div className="modal__box" onClick={(e) => e.stopPropagation()}>
-            <button className="modal__close" onClick={() => setActive(null)} aria-label="Close"><X size={22} /></button>
-            <SmartImage src={assetUrl(active.image)} alt={active.title} className="modal__img" />
+      
+      {active && createPortal(
+        <div
+          className="modal"
+          role="dialog"
+          aria-modal="true"
+          aria-label={active.title}
+          onClick={() => setActive(null)}
+        >
+          <div
+            className="modal__box"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="modal__close"
+              onClick={() => setActive(null)}
+              aria-label="Close"
+            >
+              <X size={22} />
+            </button>
+
+            <SmartImage
+              src={assetUrl(active.image)}
+              alt={active.title}
+              className="modal__img"
+            />
+
             <div className="modal__body">
-              <span className="project__cat">{getCategory(active.category)?.name}</span>
+              <span className="project__cat">
+                {getCategory(active.category)?.name}
+              </span>
+
               <h3>{active.title}</h3>
-              {active.location && <p className="project__loc"><MapPin size={15} /> {active.location}</p>}
+
+              {active.location && (
+                <p className="project__loc">
+                  <MapPin size={15} />
+                  {active.location}
+                </p>
+              )}
+
               <p>{active.description}</p>
-              {active.isSample && <p className="notice">This is a sample entry, not a completed project.</p>}
+
+              {active.isSample && (
+                <p className="notice">
+                  This is a sample entry, not a completed project.
+                </p>
+              )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
+
     </section>
   );
 }

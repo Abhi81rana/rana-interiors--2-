@@ -75,6 +75,19 @@ export const categories = [
       'Workspaces that look professional and work hard. We plan desks, storage, reception and meeting areas for focus, comfort and a clear brand impression.',
     images: [u('1524758631624-e2822e304c36'), u('1497366216548-37526070297c'), u('1497366811353-6870744d04b2')],
   },
+  
+{
+  slug: 'complete-home',
+  name: 'Complete Home Interior',
+  intro:
+    'Complete home interior solutions designed around your lifestyle, space and preferences. From living rooms and bedrooms to kitchens and custom furniture, we bring your entire home together.',
+  images: [
+    u('1600210492486-724fe5c67fb0'),
+    u('1600607687939-ce8a6c25118c'),
+    u('1600585152220-90363fe7e115'),
+  ],
+},
+
 ];
 
 export const getCategory = (slug) => categories.find((c) => c.slug === slug);
