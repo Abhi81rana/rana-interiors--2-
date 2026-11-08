@@ -40,10 +40,6 @@ const sha = (s) => crypto.createHash('sha256').update(String(s)).digest();
 /* ---------- Public API ---------- */
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
-app.get('/api/projects', (_req, res) => {
-  const list = [...getDb().projects].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  res.json(list);
-});
 
 const enquiryLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
@@ -158,31 +154,73 @@ function requireAdmin(req, res, next) {
 
 /* ---------- Admin: enquiries ---------- */
 app.get('/api/admin/enquiries', requireAdmin, async (req, res) => {
-  const { data, error } = await supabase
-    .from('enquiries')
-    .select('*')
-    .order('created_at', { ascending: false });
+  try {
+    const { data, error } = await supabase
+      .from('enquiries')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-  if (error) {
+    if (error) {
+      console.error('Fetch enquiries error:', error);
+      return res.status(500).json({
+        error: 'Unable to fetch enquiries.',
+      });
+    }
+
+    const enquiries = data.map((item) => ({
+      id: String(item.id),
+      name: item.name,
+      phone: item.phone,
+      city: item.city,
+      category: item.category,
+      categoryName: item.category_name,
+      property: item.property,
+      budget: item.budget,
+      message: item.message,
+      status: item.status?.toLowerCase() || 'new',
+      createdAt: item.created_at,
+    }));
+
+    res.json(enquiries);
+  } catch (error) {
     console.error('Fetch enquiries error:', error);
-    return res.status(500).json({ error: 'Unable to fetch enquiries.' });
+    res.status(500).json({
+      error: 'Something went wrong while fetching enquiries.',
+    });
   }
+});
 
-  const enquiries = data.map((item) => ({
-    id: String(item.id),
-    name: item.name,
-    phone: item.phone,
-    city: item.city,
-    category: item.category,
-    categoryName: item.category_name,
-    property: item.property,
-    budget: item.budget,
-    message: item.message,
-    status: item.status?.toLowerCase() || 'new',
-    createdAt: item.created_at,
-  }));
+app.get('/api/projects', async (_req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('projects')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-  res.json(enquiries);
+    if (error) {
+      console.error('Fetch projects error:', error);
+      return res.status(500).json({
+        error: 'Unable to fetch projects.',
+      });
+    }
+
+    const projects = data.map((item) => ({
+      id: String(item.id),
+      title: item.title,
+      category: item.category,
+      location: item.location,
+      description: item.description,
+      image: item.image_url,
+      createdAt: item.created_at,
+    }));
+
+    res.json(projects);
+  } catch (error) {
+    console.error('Projects fetch error:', error);
+    res.status(500).json({
+      error: 'Something went wrong while fetching projects.',
+    });
+  }
 });
 
 app.patch('/api/admin/enquiries/:id', requireAdmin, async (req, res) => {
@@ -229,55 +267,167 @@ app.delete('/api/admin/enquiries/:id', requireAdmin, async (req, res) => {
   res.json({ ok: true });
 });
 /* ---------- Admin: projects (with photo upload) ---------- */
-const EXT = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp' };
-const upload = multer({
-  storage: multer.diskStorage({
-    destination: UPLOADS_DIR,
-    filename: (_req, file, cb) => cb(null, `${Date.now()}-${crypto.randomBytes(4).toString('hex')}${EXT[file.mimetype]}`),
-  }),
-  limits: { fileSize: 5 * 1024 * 1024, files: 1 },
-  fileFilter: (_req, file, cb) => (EXT[file.mimetype] ? cb(null, true) : cb(new Error('Only JPG, PNG or WebP images are allowed.'))),
-});
-
-const removeFile = (url) => {
-  if (!url?.startsWith('/uploads/')) return;
-  fs.promises.unlink(path.join(UPLOADS_DIR, path.basename(url))).catch(() => {});
+const EXT = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/webp': '.webp',
 };
 
-app.post('/api/admin/projects', requireAdmin, upload.single('image'), async (req, res) => {
-  const b = req.body || {};
-  const project = {
-    id: id(),
-    title: clean(b.title, 120),
-    category: clean(b.category, 40),
-    location: clean(b.location, 120),
-    description: clean(b.description, 2000),
-    image: req.file ? `/uploads/${req.file.filename}` : '',
-    createdAt: new Date().toISOString(),
-  };
-  const fail = (msg) => {
-    if (req.file) removeFile(project.image);
-    return res.status(400).json({ error: msg });
-  };
-  if (!project.title) return fail('Project title is required.');
-  if (!CATEGORY_SLUGS.includes(project.category)) return fail('Please choose a valid category.');
-  if (!project.image) return fail('Please upload a project photo.');
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024,
+    files: 1,
+  },
+  fileFilter: (_req, file, cb) => {
+    if (EXT[file.mimetype]) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only JPG, PNG or WebP images are allowed.'));
+    }
+  },
+});
 
-  getDb().projects.unshift(project);
-  await save();
-  res.status(201).json(project);
+
+app.post('/api/admin/projects', requireAdmin, upload.single('image'), async (req, res) => {
+  try {
+    const b = req.body || {};
+
+    const title = clean(b.title, 120);
+    const category = clean(b.category, 40);
+    const location = clean(b.location, 120);
+    const description = clean(b.description, 2000);
+
+    if (!title) {
+      return res.status(400).json({ error: 'Project title is required.' });
+    }
+
+    if (!CATEGORY_SLUGS.includes(category)) {
+      return res.status(400).json({ error: 'Please choose a valid category.' });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'Please upload a project photo.' });
+    }
+
+    const extension = EXT[req.file.mimetype];
+    const fileName = `${Date.now()}-${crypto.randomBytes(6).toString('hex')}${extension}`;
+
+    // Upload image to Supabase Storage
+    const { error: uploadError } = await supabase.storage
+      .from('project-images')
+      .upload(fileName, req.file.buffer, {
+        contentType: req.file.mimetype,
+        upsert: false,
+      });
+
+    if (uploadError) {
+      console.error('Project image upload error:', uploadError);
+      return res.status(500).json({ error: 'Unable to upload project image.' });
+    }
+
+    // Get public image URL
+    const { data: imageData } = supabase.storage
+      .from('project-images')
+      .getPublicUrl(fileName);
+
+    const imageUrl = imageData.publicUrl;
+
+    // Save project details in Supabase Database
+    const { data, error } = await supabase
+      .from('projects')
+      .insert({
+        title,
+        category,
+        location,
+        description,
+        image_url: imageUrl,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Project database error:', error);
+
+      // Remove uploaded image if database insert fails
+      await supabase.storage
+        .from('project-images')
+        .remove([fileName]);
+
+      return res.status(500).json({ error: 'Unable to save project.' });
+    }
+
+    res.status(201).json({
+      id: String(data.id),
+      title: data.title,
+      category: data.category,
+      location: data.location,
+      description: data.description,
+      image: data.image_url,
+      createdAt: data.created_at,
+    });
+
+  } catch (error) {
+    console.error('Project upload error:', error);
+    res.status(500).json({ error: 'Something went wrong while uploading project.' });
+  }
 });
 
 app.delete('/api/admin/projects/:id', requireAdmin, async (req, res) => {
-  const db = getDb();
-  const item = db.projects.find((p) => p.id === req.params.id);
-  if (!item) return res.status(404).json({ error: 'Project not found.' });
-  db.projects = db.projects.filter((p) => p.id !== item.id);
-  await save();
-  removeFile(item.image);
-  res.json({ ok: true });
-});
+  try {
+    // Find project in Supabase
+    const { data: project, error: fetchError } = await supabase
+      .from('projects')
+      .select('id, image_url')
+      .eq('id', req.params.id)
+      .single();
 
+    if (fetchError || !project) {
+      return res.status(404).json({ error: 'Project not found.' });
+    }
+
+    // Extract image filename from public URL
+    const imagePath = project.image_url
+      ?.split('/project-images/')
+      .pop()
+      ?.split('?')[0];
+
+    // Delete image from Supabase Storage
+    if (imagePath) {
+      const { error: storageError } = await supabase.storage
+        .from('project-images')
+        .remove([decodeURIComponent(imagePath)]);
+
+      if (storageError) {
+        console.error('Project image delete error:', storageError);
+        return res.status(500).json({
+          error: 'Unable to delete project image.',
+        });
+      }
+    }
+
+    // Delete project from Supabase Database
+    const { error: deleteError } = await supabase
+      .from('projects')
+      .delete()
+      .eq('id', req.params.id);
+
+    if (deleteError) {
+      console.error('Project database delete error:', deleteError);
+      return res.status(500).json({
+        error: 'Unable to delete project.',
+      });
+    }
+
+    res.json({ ok: true });
+
+  } catch (error) {
+    console.error('Delete project error:', error);
+    res.status(500).json({
+      error: 'Something went wrong while deleting project.',
+    });
+  }
+});
 /* ---------- Static files ---------- */
 app.use('/uploads', express.static(UPLOADS_DIR, { maxAge: '7d', index: false }));
 
