@@ -1,6 +1,6 @@
 import { supabase } from './supabase.js';
-import cron from 'node-cron';
-import { getDb, save, DATA_DIR, UPLOADS_DIR } from './db.js';
+
+
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
@@ -428,8 +428,8 @@ app.delete('/api/admin/projects/:id', requireAdmin, async (req, res) => {
     });
   }
 });
-/* ---------- Static files ---------- */
-app.use('/uploads', express.static(UPLOADS_DIR, { maxAge: '7d', index: false }));
+
+
 
 // In production the same server also serves the built website (npm run build -> /dist).
 const DIST = path.join(__dirname, '..', 'dist');
@@ -451,42 +451,6 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: 'Something went wrong on the server.' });
 });
 
-// Automatic daily backup
-const BACKUP_DIR = path.join(__dirname, 'backups');
 
-async function createBackup() {
-  try {
-    // Save latest database changes first
-    await save();
-
-    const date = new Date().toISOString().replace(/[:.]/g, '-');
-    const backupPath = path.join(BACKUP_DIR, date);
-
-    await fs.promises.mkdir(backupPath, { recursive: true });
-
-    // Database backup
-    await fs.promises.copyFile(
-      path.join(DATA_DIR, 'db.json'),
-      path.join(backupPath, 'db.json')
-    );
-
-    // Uploaded images backup
-    await fs.promises.cp(
-      UPLOADS_DIR,
-      path.join(backupPath, 'uploads'),
-      { recursive: true }
-    );
-
-    console.log('Daily backup created:', backupPath);
-  } catch (error) {
-    console.error('Backup failed:', error);
-  }
-}
-
-// Run every day at 2:00 AM
-cron.schedule('0 2 * * *', createBackup);
-
-
-console.log('Automatic daily backup scheduled for 2:00 AM');
 
 app.listen(PORT, () => console.log(`RANA INTERIORS server running on http://localhost:${PORT}`));
